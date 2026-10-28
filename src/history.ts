@@ -8,7 +8,7 @@ type HistoryOptions<T> = { //describes what should be passed to setupHistory()
 export function setupHistory<T>(options: HistoryOptions<T>) {
   const { strokes, undoButton, redoButton, renderDocument } = options; //
 
-  // stores strokes that have been undone and can be restored
+  // stores commands that have been undone and can be restored
   const redoHistory: T[] = [];
 
   // enable or disable buttons depending on available history

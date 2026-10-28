@@ -14,13 +14,14 @@ type Stroke = { //stores an array of coordinates
   points: Coordinate[];
   color: string;
   width: number;
+  render: (context: CanvasRenderingContext2D) => void;
 };
 
 // Data describing each available sticker
 type StickerDefinition = {
   id: string;
   label: string;
-  emoji: string;
+  content: string;
   size: number;
 };
 
@@ -29,18 +30,19 @@ type Sticker = {
   kind: "sticker";
   x: number;
   y: number;
-  emoji: string;
+  content: string;
   size: number;
+  render: (context: CanvasRenderingContext2D) => void;
 };
 
-// A drawing can contain either strokes or stickers
+// A command can contain either strokes or stickers
 type DrawingCommand = Stroke | Sticker;
 
-type DrawingDocument = { //stores strokes and stickers in the current drawing session
-  commands: DrawingCommand[]; //keep an array of drawing commands
+type DrawingDocument = { // Stores strokes and stickers in the current drawing session
+  commands: DrawingCommand[]; // Keep an array of drawing commands
 };
 
-const drawingDocument: DrawingDocument = { //create empty document object to store drawing commands
+const drawingDocument: DrawingDocument = { // Create empty document object to store drawing commands
   commands: [],
 };
 
@@ -52,11 +54,11 @@ const markerTools = [
   { label: "Thick Marker", width: 8, color: "black" },
 ];
 
-// all availale stickers will be defined here:
+// all available stickers will be defined here:
 const stickers: StickerDefinition[] = [
-  { id: "star", label: "Star ⭐", emoji: "⭐", size: 36 },
-  { id: "heart", label: "Heart ❤️", emoji: "❤️", size: 36 },
-  { id: "flower", label: "Flower 🌸", emoji: "🌸", size: 36 },
+  { id: "star", label: "Star ⭐", content: "⭐", size: 36 },
+  { id: "heart", label: "Heart ❤️", content: "❤️", size: 36 },
+  { id: "flower", label: "Flower 🌸", content: "🌸", size: 36 },
 ];
 
 // The selected tool determines what happens on the next pointer press
@@ -73,7 +75,7 @@ let selectedTool: SelectedTool = {
 const message = document.createElement("p");
 message.textContent = "Choose a tool, then draw or click to place a sticker.";
 
-// TEST: button to redraw all strokes
+// This button will redraw all drawing comamnds (Stroke OR Sticker)
 const redrawButton = document.createElement("button");
 redrawButton.textContent = "Redraw";
 
@@ -183,51 +185,42 @@ function getPosition(event: PointerEvent) {
 }
 
 // Draw one stroke using its saved points and appearance
-function drawStroke(stroke: Stroke) {
+function drawStroke(context: CanvasRenderingContext2D, stroke: Stroke) {
   if (stroke.points.length === 0) return; //Check if any strokes exist
 
-  ctx.beginPath();
-  ctx.strokeStyle = stroke.color;
-  ctx.fillStyle = stroke.color;
-  ctx.lineWidth = stroke.width;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  context.beginPath();
+  context.strokeStyle = stroke.color;
+  context.fillStyle = stroke.color;
+  context.lineWidth = stroke.width;
+  context.lineCap = "round";
+  context.lineJoin = "round";
 
   const firstPoint = stroke.points[0];
 
-  // draw a dot if the stroke contains only one point (x,y)
+  // Edgecase: Draw a dot if the stroke contains only one point (x,y)
   if (stroke.points.length === 1) {
-    ctx.arc(firstPoint.x, firstPoint.y, stroke.width / 2, 0, Math.PI * 2); //create a single dot
-    ctx.fill();
+    context.arc(firstPoint.x, firstPoint.y, stroke.width / 2, 0, Math.PI * 2);
+    context.fill();
     return;
   }
 
   // Connect all saved points in order
-  ctx.moveTo(firstPoint.x, firstPoint.y); /// Set starting position.
+  context.moveTo(firstPoint.x, firstPoint.y);
 
   for (let i = 1; i < stroke.points.length; i++) {
     const point = stroke.points[i]; //store next pt
-    ctx.lineTo(point.x, point.y); //create a path between the previous pt and the current pt
+    context.lineTo(point.x, point.y); //create a path between the previous pt and the current pt
   }
 
-  ctx.stroke(); // Draw complete path on canvas.
+  context.stroke(); // Draw complete path on canvas.
 }
 
-// draw a sticker using its saved position and appearance
-function drawSticker(sticker: Sticker) {
-  ctx.font = `${sticker.size}px serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(sticker.emoji, sticker.x, sticker.y);
-}
-
-// draw each command based on whether it is a stroke or sticker
-function drawCommand(command: DrawingCommand) {
-  if (command.kind === "stroke") { //check if it is a stroke
-    drawStroke(command);
-  } else {
-    drawSticker(command); //else draw a sticker instead
-  }
+// Draw a sticker using its saved position and appearance
+function drawSticker(context: CanvasRenderingContext2D, sticker: Sticker) {
+  context.font = `${sticker.size}px serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(sticker.content, sticker.x, sticker.y);
 }
 
 // Clear the canvas and reconstruct the picture from the document
@@ -236,12 +229,12 @@ function renderDocument() {
 
   // Redraw every saved command in order, including both strokes and stickers
   for (const command of drawingDocument.commands) {
-    drawCommand(command);
+    command.render(ctx);
   }
 
   // if user is current still drawing, show the current stroke.
   if (currentStroke) {
-    drawStroke(currentStroke);
+    currentStroke.render(ctx);
   }
 }
 
@@ -249,18 +242,27 @@ function renderDocument() {
 // History works with any command, including strokes and stickers.
 const history = setupHistory({
   strokes: drawingDocument.commands,
-  undoButton,
+  undoButton, // Here we are passing the buttons we created so the functions in history.ts can use them.
   redoButton,
   renderDocument,
 });
 
 const clearRedoHistory = history.clearRedoHistory;
-const updateHistoryButtons = history.updateHistoryButtons;
 
 // redraw without deleting any saved strokes
 redrawButton.addEventListener("click", () => {
   renderDocument();
 });
+
+// cancel the current stroke without saving it
+function cancelStroke() {
+  if (!currentStroke) return;
+
+  currentStroke = null;
+  isDrawing = false;
+
+  renderDocument();
+}
 
 // Start drawing when the pointer is pressed.
 canvas.addEventListener("pointerdown", (event: PointerEvent) => {
@@ -272,22 +274,24 @@ canvas.addEventListener("pointerdown", (event: PointerEvent) => {
   if (selectedTool.kind === "sticker") {
     const sticker = selectedTool.sticker;
 
-    drawingDocument.commands.push({
+    const placedSticker: Sticker = {
       kind: "sticker",
       x: position.x,
       y: position.y,
-      emoji: sticker.emoji,
+      content: sticker.content,
       size: sticker.size,
-    });
+      render(context) {
+        drawSticker(context, this);
+      },
+    };
 
-    // new drawing actions will clear the redo history
-    clearRedoHistory();
-    renderDocument();
-    updateHistoryButtons();
+    drawingDocument.commands.push(placedSticker); // Add command to the document immediately
+    clearRedoHistory(); // New drawing actions will clear the redo history
+    renderDocument(); // Update Canvas
     return;
   }
 
-  // start a new stroke and save its first point.
+  // Else, start drawing a stroke:
   isDrawing = true;
   canvas.setPointerCapture(event.pointerId);
 
@@ -296,12 +300,13 @@ canvas.addEventListener("pointerdown", (event: PointerEvent) => {
     points: [{ x: position.x, y: position.y }], //store current position
     color: selectedTool.color,
     width: selectedTool.width,
+    render(context) {
+      drawStroke(context, this);
+    },
   };
-
-  renderDocument(); //this accounts for single pts that the user makes in one stroke
+  renderDocument(); // Update Canvas
 });
 
-//do: track when mouse is held and released
 // Draw a line as the pointer moves
 canvas.addEventListener("pointermove", (event: PointerEvent) => {
   if (!isDrawing || !currentStroke) return; //check if the pointer is being pressed down, else do not draw anything or record any pts
@@ -317,27 +322,19 @@ canvas.addEventListener("pointermove", (event: PointerEvent) => {
   renderDocument();
 });
 
-// Stop drawing when the pointer is released.
+// Stop drawing when the pointer is released
 canvas.addEventListener("pointerup", () => {
   if (currentStroke) {
-    // save the completed stroke in the document when mouse is released. Document will now have a reference to this stroke.
+    // Save the completed command in the document when mouse is released
     drawingDocument.commands.push(currentStroke);
 
     // new strokes will clear the redo history
     clearRedoHistory();
   }
-
-  currentStroke = null;
-  isDrawing = false;
-
-  renderDocument();
-  updateHistoryButtons();
-});
-
-// cancel the current stroke without saving it
-canvas.addEventListener("pointercancel", () => {
   currentStroke = null;
   isDrawing = false;
 
   renderDocument();
 });
+
+canvas.addEventListener("pointercancel", cancelStroke);
