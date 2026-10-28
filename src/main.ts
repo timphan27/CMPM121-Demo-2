@@ -195,7 +195,7 @@ function drawStroke(stroke: Stroke) {
 
   const firstPoint = stroke.points[0];
 
-  // draw a dot if the stroke has only one point
+  // draw a dot if the stroke contains only one point (x,y)
   if (stroke.points.length === 1) {
     ctx.arc(firstPoint.x, firstPoint.y, stroke.width / 2, 0, Math.PI * 2); //create a single dot
     ctx.fill();
