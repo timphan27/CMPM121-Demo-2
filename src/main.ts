@@ -92,6 +92,11 @@ const exportButton = document.createElement("button");
 exportButton.textContent = "Export PNG";
 exportButton.title = "Download a high-resolution PNG of the drawing";
 
+// lets the user add their own sticker at runtime
+const newStickerButton = document.createElement("button");
+newStickerButton.textContent = "+ New Sticker";
+newStickerButton.title = "Make your own sticker from any emoji or text";
+
 // create buttons for the marker tools
 const markerButtons = markerTools.map((tool) => {
   const button = document.createElement("button");
@@ -102,21 +107,6 @@ const markerButtons = markerTools.map((tool) => {
       kind: "marker",
       width: tool.width,
       color: tool.color,
-    };
-  });
-
-  return button;
-});
-
-// create buttons for each sticker in the map
-const stickerButtons = stickers.map((sticker) => {
-  const button = document.createElement("button");
-  button.textContent = sticker.label;
-
-  button.addEventListener("click", () => {
-    selectedTool = {
-      kind: "sticker",
-      sticker,
     };
   });
 
@@ -145,6 +135,48 @@ toolsPanel.style.display = "flex";
 toolsPanel.style.flexDirection = "column"; //set the buttons to be arranged vertically
 toolsPanel.style.gap = "10px";
 
+// holds one button per sticker definition (built-in and user-made)
+const stickerShelf = document.createElement("div");
+stickerShelf.style.display = "flex";
+stickerShelf.style.flexDirection = "column";
+stickerShelf.style.gap = "10px";
+
+// Rebuild the sticker buttons from the stickers data.
+// Built-in and user-made stickers go through this exact same path.
+function rebuildStickerShelf() {
+  stickerShelf.replaceChildren();
+
+  for (const sticker of stickers) {
+    const button = document.createElement("button");
+    button.textContent = sticker.label;
+
+    button.addEventListener("click", () => {
+      selectedTool = { kind: "sticker", sticker };
+    });
+
+    stickerShelf.append(button);
+  }
+}
+
+// A user-made sticker is just new data added to the same list as the built-ins
+newStickerButton.addEventListener("click", () => {
+  const text = prompt("Type an emoji or a short word for your sticker:", "🐸");
+  if (!text || !text.trim()) return;
+
+  const content = text.trim();
+
+  const newSticker: StickerDefinition = {
+    id: `custom-${stickers.length}`,
+    label: `${content} (yours)`,
+    content,
+    size: 36,
+  };
+
+  stickers.push(newSticker);
+  selectedTool = { kind: "sticker", sticker: newSticker };
+  rebuildStickerShelf();
+});
+
 // put the heading, message, and canvas on the left.
 const canvasPanel = document.createElement("div");
 canvasPanel.style.display = "flex";
@@ -155,11 +187,14 @@ canvasPanel.append(heading, message, canvas);
 
 toolsPanel.append(
   ...markerButtons,
-  ...stickerButtons,
+  stickerShelf,
+  newStickerButton,
   undoButton,
   redoButton,
   exportButton,
 );
+
+rebuildStickerShelf();
 
 layout.append(canvasPanel, toolsPanel); // Put the inner containers inside layou
 app.append(layout);
