@@ -75,10 +75,6 @@ let selectedTool: SelectedTool = {
 const message = document.createElement("p");
 message.textContent = "Choose a tool, then draw or click to place a sticker.";
 
-// This button will redraw all drawing comamnds (Stroke OR Sticker)
-const redrawButton = document.createElement("button");
-redrawButton.textContent = "Redraw";
-
 // undo button
 const undoButton = document.createElement("button");
 undoButton.textContent = "Undo";
@@ -155,7 +151,6 @@ canvasPanel.append(heading, message, canvas);
 toolsPanel.append(
   ...markerButtons,
   ...stickerButtons,
-  redrawButton,
   undoButton,
   redoButton,
 );
@@ -223,14 +218,21 @@ function drawSticker(context: CanvasRenderingContext2D, sticker: Sticker) {
   context.fillText(sticker.content, sticker.x, sticker.y);
 }
 
+// Draw a list of commands into any canvas context
+function replayCommands(
+  context: CanvasRenderingContext2D,
+  commands: DrawingCommand[],
+) {
+  for (const command of commands) {
+    command.render(context);
+  }
+}
+
 // Clear the canvas and reconstruct the picture from the document
 function renderDocument() {
   ctx.clearRect(0, 0, canvas.width, canvas.height); //clear current canvas pixels
 
-  // Redraw every saved command in order, including both strokes and stickers
-  for (const command of drawingDocument.commands) {
-    command.render(ctx);
-  }
+  replayCommands(ctx, drawingDocument.commands);
 
   // if user is current still drawing, show the current stroke.
   if (currentStroke) {
@@ -248,11 +250,6 @@ const history = setupHistory({
 });
 
 const clearRedoHistory = history.clearRedoHistory;
-
-// redraw without deleting any saved strokes
-redrawButton.addEventListener("click", () => {
-  renderDocument();
-});
 
 // cancel the current stroke without saving it
 function cancelStroke() {
