@@ -87,6 +87,11 @@ redoButton.textContent = "Redo";
 redoButton.disabled = true;
 redoButton.title = "Redo the most recently undone action";
 
+// export button
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export PNG";
+exportButton.title = "Download a high-resolution PNG of the drawing";
+
 // create buttons for the marker tools
 const markerButtons = markerTools.map((tool) => {
   const button = document.createElement("button");
@@ -153,6 +158,7 @@ toolsPanel.append(
   ...stickerButtons,
   undoButton,
   redoButton,
+  exportButton,
 );
 
 layout.append(canvasPanel, toolsPanel); // Put the inner containers inside layou
@@ -239,6 +245,33 @@ function renderDocument() {
     currentStroke.render(ctx);
   }
 }
+
+// Export by replaying committed commands into a larger offscreen canvas
+function exportDrawing() {
+  const scale = 4;
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = canvas.width * scale;
+  exportCanvas.height = canvas.height * scale;
+
+  const exportContext = exportCanvas.getContext("2d");
+  if (!exportContext) return;
+
+  exportContext.fillStyle = "white";
+  exportContext.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+  exportContext.scale(scale, scale);
+
+  replayCommands(exportContext, drawingDocument.commands);
+
+  const link = document.createElement("a");
+  link.href = exportCanvas.toDataURL("image/png");
+  link.download = "drawing.png";
+  link.click();
+}
+
+exportButton.addEventListener("click", () => {
+  exportDrawing();
+});
 
 // Set up undo and redo history
 // History works with any command, including strokes and stickers.
