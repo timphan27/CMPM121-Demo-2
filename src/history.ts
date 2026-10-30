@@ -1,7 +1,7 @@
-type HistoryOptions<T> = { //describes what should be passed to setupHistory()
-  strokes: T[]; // pass the array of strokes of the document
-  undoButton: HTMLButtonElement; // we pass pass the element of the button we created here
-  redoButton: HTMLButtonElement; // we pass pass the element of the button we created here
+type HistoryOptions<T> = { //Describes what should be passed to setupHistory()
+  strokes: T[]; // Pass the array of strokes of the document
+  undoButton: HTMLButtonElement; // We pass the element of the button we created here
+  redoButton: HTMLButtonElement;
   renderDocument: () => void;
 };
 
