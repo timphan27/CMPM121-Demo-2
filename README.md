@@ -20,7 +20,9 @@ This project lets you draw with different marker sizes and place stickers on a c
 
 - Select Redo to restore an undone drawing or sticker.
 
-- Select Redraw to redraw the canvas using the saved drawing commands.
+- Click the + New Sticker Button to create a custom sticker. Then enter its contents to finish.
+
+- To save the canvas at its current state, click the Export PNG button at the bottom.
 
 # Running the App
 
@@ -60,10 +62,10 @@ Check undo and redo:
 The new command is stored in drawingDocument.commands, which is the same collection used by the history system. This means the existing undo and redo functionality should work without needing separate history logic for the new tool. https://github.com/timphan27/CMPM121-Demo-2/blob/a199e5463d3eef6abb43a8432416c97fb3725356/src/history.ts#L8
 
 Check export behavior:
-Find the``````````````````` exportPNG()``` function in main.ts. It loops through drawingDocument.commands and calls each command's render() function on the export canvas. The new command should use the same rendering process, so exportPNG() should work without needing a separate rendering implementation.
+Find the exportDrawing() function in main.ts. It loops through drawingDocument.commands and calls each command's render() function on the export canvas. The new command should use the same rendering process, so exportPNG() should work without needing a separate rendering implementation. https://github.com/timphan27/CMPM121-Demo-2/blob/b679954eac8fe69a42d60bfa908ee737a7a66052/src/main.ts#L285
 
 Test the new tool.
-Check that the tool can be selected and used, that its output appears correctly. Undo 3 times and redo 3 times and check if the canvas stays the same as before you did the first undo.
+Check that the tool can be selected and used, that its output appears correctly. Undo 3 times and redo 3 times and check if the canvas stays the same as before you did the first undo. Attempt to export the drawing and see that the new tool appear correctly in the PNG file.
 
 # Essential Code:
 
